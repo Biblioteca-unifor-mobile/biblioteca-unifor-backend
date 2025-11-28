@@ -1,0 +1,45 @@
+### Testar novas rotas de Folders, Loans e Reservations por usuário
+### Todas as rotas requerem autenticação Bearer Token e permissão ADMIN ou SUPER
+
+@baseUrl = http://localhost:3000
+@token = SEU_TOKEN_AQUI
+@matricula = 20230001
+
+### 1. Listar pastas de um usuário (Admin/Super)
+GET {{baseUrl}}/users/{{matricula}}/folders
+Authorization: Bearer {{token}}
+
+### 2. Listar empréstimos de um usuário (Admin/Super)
+GET {{baseUrl}}/users/{{matricula}}/loans
+Authorization: Bearer {{token}}
+
+### 3. Listar reservas de um usuário (Admin/Super)
+GET {{baseUrl}}/users/{{matricula}}/reservations
+Authorization: Bearer {{token}}
+
+###
+### Exemplos de respostas esperadas:
+###
+### Folders (array vazio se não houver):
+### {
+###   "message": "Pastas do usuário listadas com sucesso.",
+###   "count": 0,
+###   "data": []
+### }
+###
+### Loans (array vazio se não houver):
+### {
+###   "message": "Empréstimos do usuário listados com sucesso.",
+###   "count": 0,
+###   "data": []
+### }
+###
+### Reservations (array vazio se não houver):
+### {
+###   "message": "Reservas do usuário listadas com sucesso.",
+###   "count": 0,
+###   "data": []
+### }
+
+
+
