@@ -17,8 +17,11 @@ export class UsersService {
     userWhereUniqueInput: Prisma.UserWhereUniqueInput,
   ): Promise<User> {
     try {
-      const user = await this.prisma.user.findUnique({
-        where: userWhereUniqueInput,
+      const user = await this.prisma.user.findFirst({
+        where: {
+          ...userWhereUniqueInput,
+          isDeleted: false,
+        },
       });
 
       if (!user) throw new NotFoundException('Usuário não encontrado.');
@@ -44,7 +47,10 @@ export class UsersService {
         skip,
         take,
         cursor,
-        where,
+        where: {
+          ...where,
+          isDeleted: false,
+        },
         orderBy,
       });
     } catch (error) {
@@ -72,7 +78,12 @@ export class UsersService {
     const { where, data } = params;
 
     try {
-      const userExists = await this.prisma.user.findUnique({ where });
+      const userExists = await this.prisma.user.findFirst({
+        where: {
+          ...where,
+          isDeleted: false,
+        },
+      });
       if (!userExists) throw new NotFoundException('Usuário não encontrado.');
 
       return await this.prisma.user.update({
@@ -90,10 +101,18 @@ export class UsersService {
 
   async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
     try {
-      const user = await this.prisma.user.findUnique({ where });
+      const user = await this.prisma.user.findFirst({
+        where: {
+          ...where,
+          isDeleted: false,
+        },
+      });
       if (!user) throw new NotFoundException('Usuário não encontrado.');
 
-      return await this.prisma.user.delete({ where });
+      return await this.prisma.user.update({
+        where,
+        data: { isDeleted: true },
+      });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw this.handlePrismaError(error, 'deletar o usuário');
