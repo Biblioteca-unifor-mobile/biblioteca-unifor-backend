@@ -11,7 +11,7 @@ export class UsersController {
     constructor(private userService: UsersService) { }
 
 
-    @Roles("ADMINISTRADOR")
+    @Roles("ADMINISTRADOR", "SUPER")
     @Get()
     async getAll(@Query("skip") skip?: string, @Query("take") take?: string) {
         const users = await this.userService.users({
@@ -26,7 +26,7 @@ export class UsersController {
         };
     }
 
-    @Roles("SUPER")
+    @Roles("ADMINISTRADOR", "SUPER")
     @Post()
     async createUser(@Body() user: CreateUserDto) {
         const newUser = await this.userService.createUser({
@@ -38,7 +38,7 @@ export class UsersController {
         };
     }
 
-    @Roles("SUPER")
+    @Roles("ADMINISTRADOR", "SUPER")
     @Patch(":matricula")
     async updateUser(@Param("matricula") matricula: string, @Body() user: UpdateUserDto) {
         const updatedUser = await this.userService.updateUser({
@@ -53,14 +53,14 @@ export class UsersController {
         };
     }
 
-    @Roles("ADMINISTRADOR")
+    @Roles("ADMINISTRADOR", "SUPER")
     @Delete(":matricula")
     async deleteUser(@Param("matricula") matricula: string) {
         await this.userService.deleteUser({ matricula });
         return { message: 'Usuário removido com sucesso.' };
     }
 
-    @Roles("SUPER")
+    @Roles("ADMINISTRADOR", "SUPER")
     @Get(":matricula")
     async getUser(@Param("matricula") matricula: string) {
         const user = await this.userService.findOne({ matricula });
