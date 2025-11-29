@@ -53,7 +53,7 @@ export class UsersController {
         };
     }
 
-    @Roles("SUPER")
+    @Roles("ADMINISTRADOR")
     @Delete(":matricula")
     async deleteUser(@Param("matricula") matricula: string) {
         await this.userService.deleteUser({ matricula });
