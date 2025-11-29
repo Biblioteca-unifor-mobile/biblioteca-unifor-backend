@@ -11,7 +11,7 @@ export class UsersController {
     constructor(private userService: UsersService) { }
 
 
-    @Roles("SUPER")
+    @Roles("ADMINISTRADOR")
     @Get()
     async getAll(@Query("skip") skip?: string, @Query("take") take?: string) {
         const users = await this.userService.users({
