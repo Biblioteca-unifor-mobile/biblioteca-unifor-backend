@@ -5,7 +5,13 @@ import * as argon2 from "argon2";
 export async function seedSuperUser(app: INestApplication) {
     const prisma = app.get(PrismaService);
     const email = process.env.SUPER_EMAIL;
-    const existing = await prisma.user.findUnique({ where: { email, role: "SUPER" } });
+    const existing = await prisma.user.findFirst({ 
+        where: { 
+            email, 
+            role: "SUPER",
+            isDeleted: false 
+        } 
+    });
 
     if (!existing) {
         const hashed = await argon2.hash(process.env.SUPER_PASSWORD);

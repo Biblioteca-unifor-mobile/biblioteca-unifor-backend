@@ -17,8 +17,11 @@ export class UsersService {
     userWhereUniqueInput: Prisma.UserWhereUniqueInput,
   ): Promise<User> {
     try {
-      const user = await this.prisma.user.findUnique({
-        where: userWhereUniqueInput,
+      const user = await this.prisma.user.findFirst({
+        where: {
+          ...userWhereUniqueInput,
+          isDeleted: false,
+        },
       });
 
       if (!user) throw new NotFoundException('Usuário não encontrado.');
@@ -44,7 +47,10 @@ export class UsersService {
         skip,
         take,
         cursor,
-        where,
+        where: {
+          ...where,
+          isDeleted: false,
+        },
         orderBy,
       });
     } catch (error) {
@@ -72,7 +78,12 @@ export class UsersService {
     const { where, data } = params;
 
     try {
-      const userExists = await this.prisma.user.findUnique({ where });
+      const userExists = await this.prisma.user.findFirst({
+        where: {
+          ...where,
+          isDeleted: false,
+        },
+      });
       if (!userExists) throw new NotFoundException('Usuário não encontrado.');
 
       return await this.prisma.user.update({
@@ -90,13 +101,118 @@ export class UsersService {
 
   async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
     try {
-      const user = await this.prisma.user.findUnique({ where });
+      const user = await this.prisma.user.findFirst({
+        where: {
+          ...where,
+          isDeleted: false,
+        },
+      });
       if (!user) throw new NotFoundException('Usuário não encontrado.');
 
-      return await this.prisma.user.delete({ where });
+      return await this.prisma.user.update({
+        where,
+        data: { isDeleted: true },
+      });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw this.handlePrismaError(error, 'deletar o usuário');
+    }
+  }
+
+  /**
+   * Busca todas as pastas (folders) de um usuário específico
+   */
+  async getUserFolders(matricula: string) {
+    try {
+      // Verifica se o usuário existe
+      const user = await this.findOne({ matricula });
+
+      if (!user) {
+        throw new NotFoundException('Usuário não encontrado.');
+      }
+
+      // Busca as pastas através da relação FolderUser
+      const folderMemberships = await this.prisma.folderUser.findMany({
+        where: { userMatricula: matricula },
+        include: {
+          folder: {
+            include: {
+              users: true,
+              books: true,
+            },
+          },
+        },
+      });
+
+      // Retorna apenas os folders
+      return folderMemberships.map((membership) => membership.folder);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw this.handlePrismaError(error, 'buscar pastas do usuário');
+    }
+  }
+
+  /**
+   * Busca todos os empréstimos (loans) de um usuário específico
+   */
+  async getUserLoans(matricula: string) {
+    try {
+      // Verifica se o usuário existe
+      const user = await this.findOne({ matricula });
+
+      if (!user) {
+        throw new NotFoundException('Usuário não encontrado.');
+      }
+
+      // Busca os empréstimos do usuário
+      return await this.prisma.loan.findMany({
+        where: { userMatricula: matricula },
+        include: {
+          bookCopy: {
+            include: {
+              book: true,
+            },
+          },
+        },
+        orderBy: {
+          dataEmprestimo: 'desc',
+        },
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw this.handlePrismaError(error, 'buscar empréstimos do usuário');
+    }
+  }
+
+  /**
+   * Busca todas as reservas (reservations) de um usuário específico
+   */
+  async getUserReservations(matricula: string) {
+    try {
+      // Verifica se o usuário existe
+      const user = await this.findOne({ matricula });
+
+      if (!user) {
+        throw new NotFoundException('Usuário não encontrado.');
+      }
+
+      // Busca as reservas do usuário
+      return await this.prisma.reservation.findMany({
+        where: { userMatricula: matricula },
+        include: {
+          bookCopy: {
+            include: {
+              book: true,
+            },
+          },
+        },
+        orderBy: {
+          dataReserva: 'desc',
+        },
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw this.handlePrismaError(error, 'buscar reservas do usuário');
     }
   }
 
