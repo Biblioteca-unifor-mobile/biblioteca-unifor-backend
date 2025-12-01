@@ -11,11 +11,11 @@ import { ReserveBookDto } from './dto/reserve-book.dto';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Post('add/:bookCopyId')
-  @ApiOperation({ summary: 'Adicionar exemplar à cesta' })
-  @ApiResponse({ status: 201, description: 'Exemplar adicionado à cesta' })
-  addToCart(@Param('bookCopyId') bookCopyId: string, @User() user: UserPayload) {
-    return this.cartService.addToCart(user.matricula, bookCopyId);
+  @Post('add/:bookId')
+  @ApiOperation({ summary: 'Adicionar livro à cesta' })
+  @ApiResponse({ status: 201, description: 'Livro adicionado à cesta' })
+  addToCart(@Param('bookId') bookId: string, @User() user: UserPayload) {
+    return this.cartService.addToCart(user.matricula, bookId);
   }
 
   @Get()
@@ -42,39 +42,5 @@ export class CartController {
   @ApiResponse({ status: 400, description: 'Cesta vazia ou erro na validação' })
   checkout(@User() user: UserPayload, @Body() checkoutDto: CheckoutDto) {
     return this.cartService.checkout(user.matricula, checkoutDto.dataLimite);
-  }
-
-  @Post('reserve/:bookId')
-  @ApiOperation({ summary: 'Reservar um livro quando não há exemplares disponíveis' })
-  @ApiResponse({ status: 201, description: 'Reserva criada com sucesso' })
-  @ApiResponse({ status: 400, description: 'Livro não encontrado ou já há exemplares disponíveis' })
-  reserveBook(
-    @Param('bookId') bookId: string,
-    @Body() reserveDto: ReserveBookDto,
-    @User() user: UserPayload,
-  ) {
-    return this.cartService.reserveBook(user.matricula, bookId, reserveDto.dataLimite);
-  }
-
-  @Post('return/:loanId')
-  @ApiOperation({ summary: 'Devolver um livro emprestado' })
-  @ApiResponse({ status: 200, description: 'Livro devolvido com sucesso' })
-  @ApiResponse({ status: 400, description: 'Empréstimo não encontrado ou já devolvido' })
-  returnBook(@Param('loanId') loanId: string, @User() user: UserPayload) {
-    return this.cartService.returnBook(user.matricula, loanId);
-  }
-
-  @Get('loans')
-  @ApiOperation({ summary: 'Listar meus empréstimos' })
-  @ApiResponse({ status: 200, description: 'Lista de empréstimos do usuário' })
-  getMyLoans(@User() user: UserPayload) {
-    return this.cartService.getMyLoans(user.matricula);
-  }
-
-  @Get('reservations')
-  @ApiOperation({ summary: 'Listar minhas reservas' })
-  @ApiResponse({ status: 200, description: 'Lista de reservas do usuário' })
-  getMyReservations(@User() user: UserPayload) {
-    return this.cartService.getMyReservations(user.matricula);
   }
 }

@@ -63,6 +63,7 @@ export class LoanService {
 
     const dataDevolucao = new Date();
     let divida = 0;
+    // Cálculo de multa mantido igual ao seu
     if (dataDevolucao > loan.dataLimite) {
       const diasAtraso = Math.ceil(
         (dataDevolucao.getTime() - loan.dataLimite.getTime()) /
@@ -72,6 +73,7 @@ export class LoanService {
     }
 
     return this.prisma.$transaction(async (prisma) => {
+      // 1. Atualiza o Empréstimo para DEVOLVIDO
       const updatedLoan = await prisma.loan.update({
         where: { id: loanId },
         data: {
@@ -81,10 +83,28 @@ export class LoanService {
         },
       });
 
-      await prisma.bookCopy.update({
-        where: { id: loan.bookCopyId },
-        data: { status: 'DISPONIVEL' },
+      const activeReservation = await prisma.reservation.findFirst({
+        where: {
+            bookCopyId: loan.bookCopyId,
+            status: 'ATIVA'
+        },
+        orderBy: { dataReserva: 'asc' }
       });
+
+      if (activeReservation) {
+        await prisma.bookCopy.update({
+            where: { id: loan.bookCopyId },
+            data: { status: 'RESERVADO' }
+        });
+        
+
+      } else {
+        // SE NÃO TIVER RESERVA: Vida normal, livro fica DISPONIVEL
+        await prisma.bookCopy.update({
+            where: { id: loan.bookCopyId },
+            data: { status: 'DISPONIVEL' },
+        });
+      }
 
       return updatedLoan;
     });
@@ -133,6 +153,59 @@ export class LoanService {
         },
       },
     });
+  }
+
+  async getBookCopyStatus(bookCopyId: string) {
+    const copy = await this.prisma.bookCopy.findUnique({
+      where: { id: bookCopyId },
+      include: {
+        book: true, // Traz dados do livro (Título, Autor)
+        loans: {
+          // Traz apenas o empréstimo ATIVO (se houver)
+          where: { status: 'ATIVO' },
+          include: {
+            user: { // Traz dados de QUEM está com o livro
+              select: {
+                matricula: true,
+                nome: true, // Supondo que seu usuário tenha nome
+                email: true,
+              }
+            }
+          }
+        },
+        reservation: {
+          // Traz se tem reserva ativa
+          where: { status: 'ATIVA' }
+        }
+      },
+    });
+
+    if (!copy) {
+      throw new NotFoundException('Exemplar não encontrado.');
+    }
+
+    // Organiza o retorno para ficar mais fácil para o Admin ler
+    const activeLoan = copy.loans[0] || null;
+
+    return {
+      exemplar: {
+        id: copy.id,
+        numero: copy.copyNumber,
+        status: copy.status, // DISPONIVEL, ALUGADO, RESERVADO
+        condicao: copy.condition,
+      },
+      livro: copy.book,
+      emprestimoAtual: activeLoan ? {
+        loanId: activeLoan.id,
+        aluno: activeLoan.user,
+        dataEmprestimo: activeLoan.dataEmprestimo,
+        dataLimite: activeLoan.dataLimite,
+        diasAtraso: activeLoan.dataLimite < new Date() 
+          ? Math.floor((new Date().getTime() - activeLoan.dataLimite.getTime()) / (1000 * 3600 * 24)) 
+          : 0
+      } : null,
+      reservaAtiva: copy.reservation ? copy.reservation : null
+    };
   }
 
   async getActiveLoans(userMatricula: string) {

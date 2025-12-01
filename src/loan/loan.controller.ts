@@ -1,22 +1,15 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
+import { 
+  Controller, Get, Patch, Param, UseGuards, ForbiddenException 
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { User as UserDecorator } from '../auth/decorators/user.decorator';
-import { CreateLoanDto } from './dto/create-loan.dto';
+import { User, User as UserDecorator, UserPayload } from '../auth/decorators/user.decorator';
 import { LoanService } from './loan.service';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 
 @ApiBearerAuth()
 @ApiTags('Empréstimos')
@@ -25,101 +18,44 @@ import { LoanService } from './loan.service';
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}
 
-  @Post()
-  @ApiOperation({
-    summary: 'Cria um novo empréstimo',
-    description:
-      'Cria um novo empréstimo de um exemplar de livro para o usuário logado.',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'O empréstimo foi criado com sucesso.',
-  })
-  @ApiResponse({ status: 404, description: 'Exemplar não encontrado.' })
-  @ApiResponse({
-    status: 409,
-    description: 'Exemplar não está disponível para empréstimo.',
-  })
-  createLoan(
-    @UserDecorator() user,
-    @Body() createLoanDto: CreateLoanDto,
-  ) {
-    return this.loanService.createLoan(user.matricula, createLoanDto);
-  }
 
-  @Patch(':id/return')
-  @ApiOperation({
-    summary: 'Devolve um empréstimo',
-    description: 'Registra a devolução de um exemplar de livro.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'O empréstimo foi devolvido com sucesso.',
-  })
-  @ApiResponse({ status: 404, description: 'Empréstimo não encontrado.' })
-  @ApiResponse({
-    status: 409,
-    description: 'Este empréstimo já foi devolvido.',
-  })
-  returnLoan(@Param('id') id: string) {
-    return this.loanService.returnLoan(id);
-  }
-
-  @Patch(':id/renew')
-  @ApiOperation({
-    summary: 'Renova um empréstimo',
-    description: 'Renova a data de devolução de um empréstimo ativo.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'O empréstimo foi renovado com sucesso.',
-  })
-  @ApiResponse({ status: 404, description: 'Empréstimo não encontrado.' })
-  @ApiResponse({
-    status: 409,
-    description:
-      'Empréstimo não está ativo ou já atingiu o limite de renovações.',
-  })
-  renewLoan(@Param('id') id: string) {
-    return this.loanService.renewLoan(id);
-  }
-
-  @Get('history')
-  @ApiOperation({
-    summary: 'Histórico de empréstimos',
-    description: 'Retorna o histórico de empréstimos do usuário logado.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Histórico de empréstimos retornado com sucesso.',
-  })
-  getLoanHistory(@UserDecorator() user) {
+  @Get() // GET /loans -> Lista meus empréstimos
+  @ApiOperation({ summary: 'Listar meus empréstimos (Histórico e Ativos)' })
+  getMyLoans(@User() user) {
+    // Você pode usar o método getLoanHistory ou getActiveLoans que você já tem
     return this.loanService.getLoanHistory(user.matricula);
   }
 
-  @Get('active')
-  @ApiOperation({
-    summary: 'Empréstimos ativos',
-    description: 'Retorna os empréstimos ativos do usuário logado.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Empréstimos ativos retornados com sucesso.',
-  })
-  getActiveLoans(@UserDecorator() user) {
-    return this.loanService.getActiveLoans(user.matricula);
+  @Get('admin/copy/:copyId') // Rota diferente para evitar conflito
+  @Roles('ADMINISTRADOR')
+  @ApiOperation({ summary: '[ADMIN] Consultar status detalhado de um exemplar' })
+  async getBookCopyStatus(
+    @Param('copyId') copyId: string, 
+    @User() user: UserPayload
+  ) {
+
+    return this.loanService.getBookCopyStatus(copyId);
   }
 
+  
+  @Patch(':id/return') // PATCH /loans/:id/return
+  @ApiOperation({ summary: 'Devolver um livro e calcular multa se houver' })
+  returnLoan(@Param('id') loanId: string) {
+    // Mantém a sua lógica original que calcula a dívida!
+    return this.loanService.returnLoan(loanId);
+  }
+
+
+  @Patch(':id/renew') // PATCH /loans/:id/renew
+  @ApiOperation({ summary: 'Renovar empréstimo (Máx 3 vezes)' })
+  renewLoan(@Param('id') loanId: string) {
+    // Essa lógica é exclusiva de empréstimo, o Cart não sabe fazer isso
+    return this.loanService.renewLoan(loanId);
+  }
+
+  
   @Get(':id')
-  @ApiOperation({
-    summary: 'Detalhes de um empréstimo',
-    description: 'Retorna os detalhes de um empréstimo específico.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Detalhes do empréstimo retornados com sucesso.',
-  })
-  @ApiResponse({ status: 404, description: 'Empréstimo não encontrado.' })
+  @ApiOperation({ summary: 'Ver detalhes de um empréstimo específico' })
   getLoanById(@Param('id') id: string) {
     return this.loanService.getLoanById(id);
   }
